@@ -17,10 +17,12 @@ class AES {
 		string encryptCBC(string key, string plaintext);
 		string encryptCTR(string key, string plaintext);
 		string encryptCFB(string key, string plaintext);
+		string encryptOFB(string key, string plaintext);
         string decryptECB(string key, string ciphertext);
 		string decryptCBC(string key, string ciphertext);
 		string decryptCTR(string key, string ciphertext);
 		string decryptCFB(string key, string ciphertext);
+		string decryptOFB(string key, string ciphertext);
     private:
         int bits;
 		int rounds;
@@ -31,6 +33,7 @@ class AES {
 		string decryptBlockCBC(Key *keySchedule, string ciphertext, string previousBlock);
 		string encryptOrDecryptBlockCTR(Key *keySchedule, string text, string counter);
 		string encryptOrDecryptBlockCFB(Key *keySchedule, string text, string previousBlock);
+		string encryptOrDecryptBlockOFB(Key *keySchedule, string text, string previousBlock, string xorText);
 		string generateIV();
 		string incrementCounter(string counter);
 		string createPaddingBlock(string text);

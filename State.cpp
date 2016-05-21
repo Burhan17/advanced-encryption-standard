@@ -340,7 +340,7 @@ void State::subBytes() {
         }
     }    
 }
-//XORs the state with a string. Used in CBC mode.
+//XORs the state with a string.
 void State::XORWithString(string previousCiphertextBlock){
 	//Go through each character in previousCiphertextBlock
 	//	Cast to unsigned char

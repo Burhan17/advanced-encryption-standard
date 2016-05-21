@@ -24,28 +24,6 @@ string convertBinaryToHex(string binaryText, bool key);
 //Our main method lets the user navigate through a series of menus to encrypt 
 //and decrypt text using AES with their desired settings. 
 int main() {
-	/*string testingHex = "11010100101111110101110100110000";
-	string convertHex = convertBinaryToHex(testingHex,false);
-	//cout << convertBinaryToHex(testingHex, false) << endl;
-	cout << testingHex << endl;
-	cout << convertHexToBinary(convertHex) << endl;
-	cout << endl;
-	*/
-	/*
-	string testMC = convertBinaryToASCII("11010100",false) + convertBinaryToASCII("10111111",false) + convertBinaryToASCII("01011101",false) + convertBinaryToASCII("00110000",false);
-	testMC += convertBinaryToASCII("11100000",false) + convertBinaryToASCII("10110100",false) + convertBinaryToASCII("01010010",false) + convertBinaryToASCII("10101110",false);
-	testMC += convertBinaryToASCII("10111000",false) + convertBinaryToASCII("01000001",false) + convertBinaryToASCII("00010001",false) + convertBinaryToASCII("11110001",false);
-	testMC += convertBinaryToASCII("00011110",false) + convertBinaryToASCII("00100111",false) + convertBinaryToASCII("10011000",false) + convertBinaryToASCII("11100101",false);
-	State *state = new State(testMC);
-	cout << state->printStateInBinary() << endl;
-	state->mixColumns();
-	cout << endl;
-	cout << state->printStateInBinary() << endl;
-	
-	state->invMixColumns();
-	cout << endl;
-	cout << state->printStateInBinary() << endl;
-	*/
 	menu();
 	string input;
 	bool flag = true;
@@ -127,6 +105,9 @@ bool encryption(){
 	else if(input.compare("T")== 0){ //User chose counter mode
 		ciphertext = aes.encryptCTR(key, plaintext);
 	}
+	else if(input.compare("O")== 0){ //User chose output feedback mode
+		ciphertext = aes.encryptOFB(key, plaintext);
+	}
 	else{ //User chose cipher feedback
 		ciphertext = aes.encryptCFB(key, plaintext);
 	}
@@ -181,6 +162,9 @@ bool decryption() {
 	}
 	else if(input.compare("T")== 0){ //User chose counter mode
 		plaintext = aes.decryptCTR(key, ciphertext);
+	}
+	else if(input.compare("O")== 0){ //User chose output feedback mode
+		plaintext = aes.decryptOFB(key, ciphertext);
 	}
 	else{ //User chose cipher feedback
 		plaintext = aes.decryptCFB(key, ciphertext);
@@ -355,17 +339,18 @@ string getMode(){
 	cout << "\nWhich mode of operation would you like to use? " << endl;
 	cout << "   C - Cipher Block Chaining" << endl;
 	cout << "   F - Cipher Feedback" << endl;
+	cout << "   O - Output Feedback" << endl;
 	cout << "   T - Counter" << endl;
 	cout << "   E - Electronic Codebook" << endl;
 	cout << "Enter C, F, T, or E: ";
 	getline(cin,input);
 	bool flag = true;
 	do{
-		if(input.compare("E") == 0 || input.compare("C") == 0 || input.compare("F") == 0 || input.compare("T") == 0 || input.compare("R") == 0){
+		if(input.compare("E") == 0 || input.compare("O") == 0 || input.compare("C") == 0 || input.compare("F") == 0 || input.compare("T") == 0 || input.compare("R") == 0){
 			flag = false;
 		}
 		else{
-			cout << "\nInvalid input. Please enter E for Electronic Codebook mode, \nC for Cipher Block Chaining mode, T for counter mode, \nF for Cipher Feedback mode, or R to return to the main menu: ";
+			cout << "\nInvalid input. Please enter E for Electronic Codebook mode, \nC for Cipher Block Chaining mode, T for counter mode, \nF for Cipher Feedback mode, O for Output Feedback mode, \nor R to return to the main menu: ";
 			getline(cin,input);
 		}
 	}while(flag);
