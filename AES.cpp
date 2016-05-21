@@ -105,7 +105,9 @@ string AES::encryptCTR(string key, string plaintext){
 
 	// Generate initialization vector (IV) for our counter.
 	string counter = generateIV();
-	int counterInt = atoi(counter.c_str());
+
+	/*stream.str(std::string());
+	stream.clear();*/
 
 	//The counter will be the first block of the ciphertext.
 	ciphertext += counter;
@@ -113,24 +115,16 @@ string AES::encryptCTR(string key, string plaintext){
 	int plaintextSize = plaintext.size();
 	string currentBlockOfCipherText;
 	int bytesRemaining;
-	
-	stringstream stream;
 
 	for(int i = 0; i < plaintextSize; i += 16){
 		bytesRemaining = plaintextSize - i;
 		if(bytesRemaining >= 16){
-			//Increment counter:
-			counterInt++;
-			stream << counterInt;
-			counter = stream.str();
-
-			ciphertext += AES::encryptBlockCTR(keySchedule, plaintext.substr(i,16),counter);
+			counter = incrementCounter(counter);
+			ciphertext += AES::encryptOrDecryptBlockCTR(keySchedule, plaintext.substr(i,16),counter);
 		}
 	}
 	//Increment counter:
-	counterInt++;
-	stream << counterInt;
-	counter = stream.str();
+	counter = incrementCounter(counter);
 
 	string lastBlock;
 	if(bytesRemaining == 16){
@@ -139,9 +133,42 @@ string AES::encryptCTR(string key, string plaintext){
 	else{
 		lastBlock = createPaddingBlock(plaintext.substr(plaintextSize - bytesRemaining));
 	}
-	ciphertext += AES::encryptBlockCTR(keySchedule,lastBlock,counter);
+	ciphertext += AES::encryptOrDecryptBlockCTR(keySchedule,lastBlock,counter);
 
 	return ciphertext;
+	//return decryptCTR(key, ciphertext);
+}
+//Encryption in cipher feedback mode.
+string AES::encryptCFB(string key, string plaintext){
+	Key *keySchedule = new Key(key);
+	string ciphertext = "";
+	// Generate initialization vector (IV)
+	string iv = generateIV();
+	//The iv will be the first block of the ciphertext.
+	ciphertext += iv;
+	//The iv will also be XORed with the first block of the plaintext:
+	string mostRecentBlockOfCipherText = iv;
+	int plaintextSize = plaintext.size();
+	
+	int bytesRemaining;
+	for(int i = 0; i < plaintextSize; i += 16){
+		bytesRemaining = plaintextSize - i;
+		if(bytesRemaining >= 16){
+			mostRecentBlockOfCipherText = AES::encryptOrDecryptBlockCFB(keySchedule, plaintext.substr(i,16), mostRecentBlockOfCipherText);
+			ciphertext += mostRecentBlockOfCipherText;
+		}
+	}
+	string lastBlock;
+	if(bytesRemaining == 16){
+		lastBlock = createPaddingBlock("");
+	}
+	else{
+		lastBlock = createPaddingBlock(plaintext.substr(plaintextSize - bytesRemaining));
+	}
+	ciphertext += AES::encryptOrDecryptBlockCFB(keySchedule,lastBlock,mostRecentBlockOfCipherText);
+
+	return ciphertext;
+	//return decryptCFB(key, ciphertext);
 }
 
 //Encrypt a block of plaintext in ECB mode.
@@ -188,7 +215,7 @@ string AES::encryptBlockCBC(Key *keySchedule, string plaintext, string previousB
 	return state->printState();
 }
 //Encrypt a block of plaintext in CTR mode.
-string AES::encryptBlockCTR(Key *keySchedule, string plaintext, string counter){
+string AES::encryptOrDecryptBlockCTR(Key *keySchedule, string text, string counter){
 	//Create state:
 	State *state = new State(counter);
 	
@@ -207,7 +234,31 @@ string AES::encryptBlockCTR(Key *keySchedule, string plaintext, string counter){
 	state->addRoundKey(keySchedule->getKey(rounds));
 
 	//XOR the encrypted counter with the current block of plaintext:
-	state->XORWithString(plaintext);
+	state->XORWithString(text);
+
+	return state->printState();
+}
+//Encrypt a block of plaintext in CFB mode.
+string AES::encryptOrDecryptBlockCFB(Key *keySchedule, string text, string previousBlock){
+	//Create state:
+	State *state = new State(previousBlock);
+	
+	//Initial round:
+	state->addRoundKey(keySchedule->getKey(0));
+	//Full rounds:
+	for(int i = 1; i < rounds; i++){
+		state->subBytes();
+		state->shiftRows();
+		state->mixColumns();
+		state->addRoundKey(keySchedule->getKey(i));
+	}
+	//Final round:
+	state->subBytes();
+	state->shiftRows();
+	state->addRoundKey(keySchedule->getKey(rounds));
+
+	//XOR the previous block of ciphertext with the current block of plaintext:
+	state->XORWithString(text);
 
 	return state->printState();
 }
@@ -281,11 +332,8 @@ string AES::decryptCTR(string key, string ciphertext){
 	stringstream stream;
 	//Start at 16 to skip over the IV:
 	for(int i = 16; i < ciphertextSize; i += 16){
-		counterInt++;
-		stream << counterInt;
-		counter = stream.str();
-
-		plaintext += AES::decryptBlockCTR(keySchedule, ciphertext.substr(i,16), counter);
+		counter = incrementCounter(counter);
+		plaintext += AES::encryptOrDecryptBlockCTR(keySchedule, ciphertext.substr(i,16), counter);
 	}
 
 	//Now we have to deal with the padded block at the end:
@@ -293,6 +341,36 @@ string AES::decryptCTR(string key, string ciphertext){
 	char finalByteOfFinalBlock = finalBlock[15];
 
 	int numberOfPaddedBytes;
+	stream << finalByteOfFinalBlock;
+	stream >> hex >> numberOfPaddedBytes;
+	numberOfPaddedBytes++;
+	
+	plaintext = plaintext.substr(0,((ciphertextSize - 16) - numberOfPaddedBytes));
+
+    return plaintext;
+}
+//Decryption in cipher feedback mode.
+string AES::decryptCFB(string key, string ciphertext){
+	Key *keySchedule = new Key(key);
+	string plaintext = "";
+
+	//Extract the IV (which is the first block in the ciphertext).
+	string mostRecentBlockOfCipherText = ciphertext.substr(0,16);
+
+	int ciphertextSize = ciphertext.size();
+
+	//Start at 16 to skip over the IV:
+	for(int i = 16; i < ciphertextSize; i += 16){
+		plaintext += AES::encryptOrDecryptBlockCFB(keySchedule, ciphertext.substr(i,16), mostRecentBlockOfCipherText);
+		mostRecentBlockOfCipherText = ciphertext.substr(i,16);
+	}
+
+	//Now we have to deal with the padded block at the end:
+	string finalBlock = plaintext.substr((ciphertextSize - 16) - 16);
+	char finalByteOfFinalBlock = finalBlock[15];
+
+	int numberOfPaddedBytes;
+	stringstream stream;
 	stream << finalByteOfFinalBlock;
 	stream >> hex >> numberOfPaddedBytes;
 	numberOfPaddedBytes++;
@@ -344,30 +422,6 @@ string AES::decryptBlockCBC(Key *keySchedule, string ciphertext, string previous
 	
 	return state->printState();
 }
-//Decrypt a block of ciphertext in CTR mode.
-string AES::decryptBlockCTR(Key *keySchedule, string ciphertext, string counter){
-	//Create state:
-	State *state = new State(ciphertext);
-	//Initial round:
-	state->addRoundKey(keySchedule->getKey(rounds));
-	//Full rounds:
-	for(int i = 1; i < rounds; i++){
-		state->invShiftRows();
-		state->invSubBytes();
-		state->addRoundKey(keySchedule->getKey(rounds-i));
-		state->invMixColumns();
-	}
-	//Final round:
-	state->invShiftRows();
-	state->invSubBytes();
-	state->addRoundKey(keySchedule->getKey(0));
-
-	//XOR the encrypted counter with the current block of ciphertext:
-	state->XORWithString(ciphertext);
-
-	return state->printState();
-}
-
 //Generate an initialization vector.
 string AES::generateIV(){
 	// Based on the recommendation of securingcoding.cert.org for how to generate pseudorandom numbers
@@ -383,6 +437,30 @@ string AES::generateIV(){
 		iv += to_string(distribution(engine));
 	}
 	return iv;
+}
+string AES::incrementCounter(string counter){
+	stringstream stream;
+
+	string firstHalf, secondHalf;
+	firstHalf = counter.substr(0,8);
+	secondHalf = counter.substr(8);
+
+	long secondLong;
+	string::size_type sz;
+	
+	secondLong = stol(secondHalf, &sz);
+	
+	secondLong++;
+	if(secondLong > 99999999){
+		secondHalf = "00000000";
+	}
+	else{
+		//Now convert the long back to a string:
+		stream << secondLong;
+		secondHalf = stream.str();
+	}
+
+	return firstHalf + secondHalf;
 }
 
 AES::~AES(){

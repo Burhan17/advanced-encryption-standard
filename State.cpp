@@ -2,7 +2,6 @@
 #include <bitset>
 #include <sstream>
 #include "State.h"
-#include "SBox.h"
 
 using namespace std;
 

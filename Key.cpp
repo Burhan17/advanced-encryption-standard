@@ -1,5 +1,4 @@
 #include "Key.h"
-#include "SBox.h"
 //Constructor for Key
 Key::Key(string initialKey){
 	bytes = initialKey.size();

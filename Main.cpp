@@ -1,4 +1,3 @@
-#include <iostream>
 #include <fstream>
 #include <string>
 #include <locale>
@@ -122,8 +121,14 @@ bool encryption(){
 	if(input.compare("E") == 0){ //User chose electronic codebook
 		ciphertext = aes.encryptECB(key, plaintext);
 	}
-	else{ //User chose cipher block chaining
+	else if(input.compare("C") == 0){ //User chose cipher block chaining
 		ciphertext = aes.encryptCBC(key, plaintext);
+	}
+	else if(input.compare("T")== 0){ //User chose counter mode
+		ciphertext = aes.encryptCTR(key, plaintext);
+	}
+	else{ //User chose cipher feedback
+		ciphertext = aes.encryptCFB(key, plaintext);
 	}
 
 	cout << "\nEncryption was successful." << endl;;
@@ -171,8 +176,14 @@ bool decryption() {
 	if(input.compare("E") == 0){ //User chose electronic codebook
 		plaintext = aes.decryptECB(key, ciphertext);
 	}
-	else{ //User chose cipher block chaining
+	else if(input.compare("C") == 0){ //User chose cipher block chaining
 		plaintext = aes.decryptCBC(key, ciphertext);
+	}
+	else if(input.compare("T")== 0){ //User chose counter mode
+		plaintext = aes.decryptCTR(key, ciphertext);
+	}
+	else{ //User chose cipher feedback
+		plaintext = aes.decryptCFB(key, ciphertext);
 	}
 
 	cout << "\nDecryption was successful." << endl;;
@@ -343,17 +354,18 @@ string getMode(){
 	//cout << "\nWould you like to use Electronic Codebook mode (E) or Cipher Block Chaining mode (C)? ";
 	cout << "\nWhich mode of operation would you like to use? " << endl;
 	cout << "   C - Cipher Block Chaining" << endl;
+	cout << "   F - Cipher Feedback" << endl;
 	cout << "   T - Counter" << endl;
 	cout << "   E - Electronic Codebook" << endl;
-	cout << "Enter C, T, or E: ";
+	cout << "Enter C, F, T, or E: ";
 	getline(cin,input);
 	bool flag = true;
 	do{
-		if(input.compare("E") == 0 || input.compare("C") == 0 || input.compare("T") == 0 || input.compare("R") == 0){
+		if(input.compare("E") == 0 || input.compare("C") == 0 || input.compare("F") == 0 || input.compare("T") == 0 || input.compare("R") == 0){
 			flag = false;
 		}
 		else{
-			cout << "\nInvalid input. Please enter E for Electronic Codebook mode, \nC for Cipher Block Chaining mode, T for counter mode, \nor R to return to the main menu: ";
+			cout << "\nInvalid input. Please enter E for Electronic Codebook mode, \nC for Cipher Block Chaining mode, T for counter mode, \nF for Cipher Feedback mode, or R to return to the main menu: ";
 			getline(cin,input);
 		}
 	}while(flag);
@@ -575,13 +587,28 @@ void handleResults(string result, string type){
 			flag = true;
 
 			if(input.compare("A") == 0){ //View result in ASCII format.
-				cout << "\nDecrypted " << type << ":\n" << result << endl;
+				if(type.compare("ciphertext") == 0){
+					cout << "\nCiphertext:\n" << result << endl;
+				}
+				else{
+					cout << "\nPlaintext" << ":\n" << result << endl;
+				}
 			}
 			else if(input.compare("B") == 0){ //View result in binary format.
-				cout << "\nDecrypted " << type << ":\n" << convertASCIIToBinary(result) << endl;
+				if(type.compare("ciphertext") == 0){
+					cout << "\nCiphertext:\n" << convertASCIIToBinary(result) << endl;
+				}
+				else{
+					cout << "\nPlaintext:\n" << convertASCIIToBinary(result) << endl;
+				}
 			}
 			else{ //View result in hex format.
-				cout << "\nDecrypted " << type << ":\n" << convertBinaryToHex(convertASCIIToBinary(result), false) << endl;
+				if(type.compare("ciphertext") == 0){
+					cout << "\nCiphertext:\n" << convertBinaryToHex(convertASCIIToBinary(result), false) << endl;
+				}
+				else{
+					cout << "\nPlaintext:\n" << convertBinaryToHex(convertASCIIToBinary(result), false) << endl;
+				}
 			}
 			cout << endl;
 		}
@@ -616,7 +643,7 @@ void handleResults(string result, string type){
 			else{ //Write plaintext in hex format.
 				writeToFile(false,convertBinaryToHex(convertASCIIToBinary(result), false),fileName);
 			}
-			cout << "\nDecrypted ciphertext can be found in \"" << type << ".txt\"." << endl;
+			cout << "\nThe " << type << " can be found in \"" << type << ".txt\"." << endl;
 			cout << endl;
 		}
 		else if(input.compare("R") == 0){
